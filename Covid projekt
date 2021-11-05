@@ -1,0 +1,15 @@
+
+with e as (select country, gini, GDP/population as GDP_per_capita from economies where year=2020)
+select a.*, c.population_density, e.gini, e.GDP_per_capita,
+case when weekday(a.`date`) in (0,1,2,3,4) then 0
+else 1
+end as `workday/weekday`, 
+case when month(a.`date`) in (12, 1, 2) then 4
+	when month(a.`date`) in (3, 4, 5) then 3
+    when month(a.`date`) in (6, 7, 8) then 2
+	when month(a.`date`) in (9, 10, 11) then 1
+ end as season
+from covid19_basic_differences as a
+left join countries c on c.country=a.country
+left join e on e.country=a.country
+order by a.country; 
