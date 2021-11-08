@@ -1,4 +1,4 @@
-# upravena tabulka economies tak, aby generovala nejnovejsi data, kdy data k roku 2020 nejsou
+# upravena tabulka economies tak, aby generovala nejnovejsi data, kdyz data k roku 2020 nejsou
 with e1 as (select country, max(`year`) as "year", gini from economies
 where gini is not null 
 group by country),
@@ -7,8 +7,17 @@ where GDP is not null
 group by country),
 e3 as (select country, max(`year`) as "year", mortaliy_under5 as mortality_under5 from economies
 where mortaliy_under5 is not null 
-group by country)
-select a.*, c.population_density, e1.gini, e2.GDP_per_capita, e3.mortality_under5,m.median_age_2018,
+group by country), 
+#nabozenstvi 
+r1 as (select country, share_pop_per_country as Christianity from pop_religion_per_country where religion='Christianity' group by country),
+r2 as (select country, share_pop_per_country as Islam from pop_religion_per_country prpc where religion='Islam' group by country),
+r3 as (select country, share_pop_per_country as Unaffiliated_Religions from pop_religion_per_country prpc where religion='Unaffiliated Religions' group by country),
+r4 as (select country, share_pop_per_country as Hinduism from pop_religion_per_country prpc where religion='Hinduism' group by country),
+r5 as (select country, share_pop_per_country as Buddhism from pop_religion_per_country prpc where religion='Buddhism' group by country),
+r6 as (select country, share_pop_per_country as Folk_Religions from pop_religion_per_country prpc where religion='Folk Religions' group by country),
+r7 as (select country, share_pop_per_country as Other_Religions from pop_religion_per_country prpc where religion='Other Religions' group by country),
+r8 as (select country, share_pop_per_country as Judaism from pop_religion_per_country prpc where religion='Judaism' group by country)
+select a.*, c.population_density, e1.gini, e2.GDP_per_capita, e3.mortality_under5,m.median_age_2018, r1.Christianity, r2.islam, r3.Unaffiliated_Religions, r4.Hinduism, r5.Buddhism, r6.Folk_Religions,r7.Other_Religions, 
 #casove promenne
 case when weekday(a.`date`) in (0,1,2,3,4) then 0
 else 1
@@ -24,6 +33,13 @@ left join e1 on e1.country=a.country
 left join e2 on e2.country=a.country
 left join e3 on e3.country=a.country
 left join median_age as m on m.abbreviation=c.abbreviation
+left join r1 on r1.country=a.country
+left join r2 on r2.country=a.country
+left join r3 on r3.country=a.country
+left join r4 on r4.country=a.country
+left join r5 on r5.country=a.country
+left join r6 on r6.country=a.country
+left join r7 on r7.country=a.country
+left join r8 on r8.country=a.country
 order by a.country
-limit 1000; 
-
+limit 1000;
