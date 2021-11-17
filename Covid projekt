@@ -4,7 +4,7 @@ select
 	`time`,
 	`date`,
 	`city`,
-	cast(replace (temp, ' °c', '') as int) as temperature
+	cast(replace (temp,' °c','') as int) as temperature
 from
 	weather;
 
@@ -28,7 +28,7 @@ select
 from
 	weather;
 
-create table t_radek_zeman_projekt_sql_final1 as
+create table t_radek_zeman_projekt_sql_final as
 #uprava v covid19_basic_differences a countries tak, aby se správně párovaly evropská hlavní města se státy
 with a as (
 select
