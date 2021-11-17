@@ -1,64 +1,326 @@
-create or replace view world_temperature as select `time`, `date`, `city`,  cast(replace (temp, ' °c','') as int) as temperature from weather;
-create or replace view world_gust as select `time`, `date`, `city`, cast(replace (gust, ' km/h','') as int) as wind_gust from weather;
-create or replace view world_rain as select `time`, `date`, `city`, cast(replace (rain, ' mm','') as decimal(3,1)) as precipitation from weather;
-#uprava v covid19_basic_differences a countries tak, aby sedely nazvy pro Česko
-with a as (select date, (replace (country,'Czechia', 'Czech Republic')) as country, confirmed, deaths, recovered from covid19_basic_differences),
-c as (select country, abbreviation, replace (capital_city, 'Praha', 'Prague') as capital, population_density from countries),
+create or replace
+view world_temperature as
+select
+	`time`,
+	`date`,
+	`city`,
+	cast(replace (temp, ' °c', '') as int) as temperature
+from
+	weather;
+
+create or replace
+view world_gust as
+select
+	`time`,
+	`date`,
+	`city`,
+	cast(replace (gust, ' km/h','') as int) as wind_gust
+from
+	weather;
+
+create or replace
+view world_rain as
+select
+	`time`,
+	`date`,
+	`city`,
+	cast(replace (rain, ' mm', '') as decimal(3, 1)) as precipitation
+from
+	weather;
+
+create table t_radek_zeman_projekt_sql_final1 as
+#uprava v covid19_basic_differences a countries tak, aby se správně párovaly evropská hlavní města se státy
+with a as (
+select
+	date,
+	replace ((replace (country,
+	'czechia',
+	'czech republic')),
+	'burma',
+	'myanmar') as country,
+	confirmed,
+	deaths,
+	recovered
+from
+	covid19_basic_differences),
+c as (
+select
+	country,
+	abbreviation,
+	replace ((replace((replace((replace((replace ((replace((replace ((replace (replace ((replace (capital_city,
+	'praha',
+	'prague')),
+	'bruxelles [brussel]',
+	'brussels'),
+	'wien',
+	'vienna')),
+	'helsinki [helsingfors]',
+	'helsinki')),
+	'athenai',
+	'athens')),
+	'bucuresti',
+	'bucharest')),
+	'kyiv',
+	'kiev')),
+	'lisboa',
+	'lisbon')),
+	'roma',
+	'rome')),
+	'warszawa',
+	'warsaw') as capital,
+	population_density
+from
+	countries),
 #upravena tabulka economies tak, aby generovala nejnovejsi data, kdyz data k roku 2020 nejsou
-e1 as (select country, max(`year`) as "year", gini from economies
-where gini is not null 
-group by country),
-e2 as (select country, max(`year`) as "year", round (GDP/population,1) as GDP_per_capita from economies
-where GDP is not null 
-group by country),
-e3 as (select country, max(`year`) as "year", mortaliy_under5 as mortality_under5 from economies
-where mortaliy_under5 is not null 
-group by country), 
-#doba doziti
-l1 as (select country, life_expectancy from life_expectancy where year=1965),
-l2 as (select country, life_expectancy from life_expectancy where year=2015),
+e1 as (
+select
+	country,
+	max(`year`) as "year",
+	gini
+from
+	economies
+where
+	gini is not null
+group by
+	country),
+e2 as (
+select
+	country,
+	max(`year`) as "year",
+	round (gdp / population,
+	1) as gdp_per_capita
+from
+	economies
+where
+	gdp is not null
+group by
+	country),
+e3 as (
+select
+	country,
+	max(`year`) as "year",
+	mortaliy_under5 as mortality_under5
+from
+	economies
+where
+	mortaliy_under5 is not null
+group by
+	country),
+#porovnání doby dožití
+l1 as (
+select
+	country,
+	life_expectancy
+from
+	life_expectancy
+where
+	year = 1965),
+l2 as (
+select
+	country,
+	life_expectancy
+from
+	life_expectancy
+where
+	year = 2015),
 #nabozenstvi 
-r1 as (select country, share_pop_per_country as Christianity from pop_religion_per_country where religion='Christianity' group by country),
-r2 as (select country, share_pop_per_country as Islam from pop_religion_per_country prpc where religion='Islam' group by country),
-r3 as (select country, share_pop_per_country as Unaffiliated_Religions from pop_religion_per_country prpc where religion='Unaffiliated Religions' group by country),
-r4 as (select country, share_pop_per_country as Hinduism from pop_religion_per_country prpc where religion='Hinduism' group by country),
-r5 as (select country, share_pop_per_country as Buddhism from pop_religion_per_country prpc where religion='Buddhism' group by country),
-r6 as (select country, share_pop_per_country as Folk_Religions from pop_religion_per_country prpc where religion='Folk Religions' group by country),
-r7 as (select country, share_pop_per_country as Other_Religions from pop_religion_per_country prpc where religion='Other Religions' group by country),
-r8 as (select country, share_pop_per_country as Judaism from pop_religion_per_country prpc where religion='Judaism' group by country),
-#pocasi 
-w1 as (select `city`,`date`, count(precipitation)*3 as dry_hours from world_rain where precipitation=0 and `city` is not null group by `date`, `city`),
-w2 as (select `city`,`date`, max(wind_gust) as gust from world_gust where `city` is not null group by `date`, `city`),
-w3 as (select `city`,`date`, avg(temperature) as avg_temp from world_temperature where `time`<"21:00" and `time`>="09:00" and `city` is not null group by `date`, `city`)
-create table sqlproject as (select a.*, a.confirmed, a.deaths, a.recovered, c.population_density, e1.gini, e2.GDP_per_capita, e3.mortality_under5,m.median_age_2018, r1.Christianity, r2.islam, r3.Unaffiliated_Religions, r4.Hinduism, r5.Buddhism, r6.Folk_Religions,r7.Other_Religions,
-(l2.life_expectancy-l1.life_expectancy) as life_expectancy_diff, w1.dry_hours,w2.gust, w3.avg_temp,
-#casove promenne
-case when weekday(a.`date`) in (0,1,2,3,4) then 0
-else 1
-end as `workday/weekday`, 
-case when month(a.`date`) in (12, 1, 2) then 4
-	when month(a.`date`) in (3, 4, 5) then 3
-    when month(a.`date`) in (6, 7, 8) then 2
-	when month(a.`date`) in (9, 10, 11) then 1
- end as season
-from a
-left join c on c.country=a.country
-left join e1 on e1.country=a.country
-left join e2 on e2.country=a.country
-left join e3 on e3.country=a.country
-left join l1 on l1.country=a.country
-left join l2 on l2.country=a.country
-left join median_age as m on m.abbreviation=c.abbreviation
-left join r1 on r1.country=a.country
-left join r2 on r2.country=a.country
-left join r3 on r3.country=a.country
-left join r4 on r4.country=a.country
-left join r5 on r5.country=a.country
-left join r6 on r6.country=a.country
-left join r7 on r7.country=a.country
-left join r8 on r8.country=a.country
-left join w1 on w1.`date`=a.`date` and w1.city=c.capital
-left join w2 on w2.`date`=a.`date` and w2.city=c.capital
-left join w3 on w3.`date`=a.`date` and w3.city=c.capital
-order by a.country
-limit 200);
+r1 as (
+select
+	country,
+	share_pop_per_country as christianity
+from
+	pop_religion_per_country
+where
+	religion = 'christianity'
+group by
+	country),
+r2 as (
+select
+	country,
+	share_pop_per_country as islam
+from
+	pop_religion_per_country prpc
+where
+	religion = 'islam'
+group by
+	country),
+r3 as (
+select
+	country,
+	share_pop_per_country as unaffiliated_religions
+from
+	pop_religion_per_country prpc
+where
+	religion = 'unaffiliated religions'
+group by
+	country),
+r4 as (
+select
+	country,
+	share_pop_per_country as hinduism
+from
+	pop_religion_per_country prpc
+where
+	religion = 'hinduism'
+group by
+	country),
+r5 as (
+select
+	country,
+	share_pop_per_country as buddhism
+from
+	pop_religion_per_country prpc
+where
+	religion = 'buddhism'
+group by
+	country),
+r6 as (
+select
+	country,
+	share_pop_per_country as folk_religions
+from
+	pop_religion_per_country prpc
+where
+	religion = 'folk religions'
+group by
+	country),
+r7 as (
+select
+	country,
+	share_pop_per_country as other_religions
+from
+	pop_religion_per_country prpc
+where
+	religion = 'other religions'
+group by
+	country),
+r8 as (
+select
+	country,
+	share_pop_per_country as judaism
+from
+	pop_religion_per_country prpc
+where
+	religion = 'judaism'
+group by
+	country),
+#pocasi
+w1 as (
+select
+	`city`,
+	`date`,
+	count(precipitation)* 3 as dry_hours
+from
+	world_rain
+where
+	precipitation = 0
+	and `city` is not null
+group by
+	`date`,
+	`city`),
+w2 as (
+select
+	`city`,
+	`date`,
+	max(wind_gust) as gust
+from
+	world_gust
+where
+	`city` is not null
+group by
+	`date`,
+	`city`),
+w3 as (
+select
+	`city`,
+	`date`,
+	avg(temperature) as avg_day_temp
+from
+	world_temperature
+where
+	`time`<"21:00"
+	and `time` >= "09:00"
+	and `city` is not null
+group by
+	`date`,
+	`city`)
+select
+	a.`date`,
+	a.country,
+	a.confirmed,
+	a.deaths,
+	a.recovered,
+	ct.tests_performed,
+	c.population_density,
+	c.population,
+	e1.gini,
+	e2.gdp_per_capita,
+	e3.mortality_under5,
+	m.median_age_2018,
+	r1.christianity,
+	r2.islam,
+	r3.unaffiliated_religions,
+	r4.hinduism,
+	r5.buddhism,
+	r6.folk_religions,
+	r7.other_religions,
+	(l2.life_expectancy-l1.life_expectancy) as life_expectancy_diff,
+	w1.dry_hours,
+	w2.gust,
+	w3.avg_day_temp,
+	#casove promenne	case
+		when weekday(a.`date`) in (0, 1, 2, 3, 4) then 0
+		else 1
+	end as `workday/weekday`,
+	case
+		when month(a.`date`) in (12, 1, 2) then 4
+		when month(a.`date`) in (3, 4, 5) then 3
+		when month(a.`date`) in (6, 7, 8) then 2
+		when month(a.`date`) in (9, 10, 11) then 1
+	end as season
+from
+	a
+left join c on
+	c.country = a.country
+inner join covid19_tests ct on
+	ct.`date` = a.`date`
+	and ct.country = a.country
+left join e1 on
+	e1.country = a.country
+left join e2 on
+	e2.country = a.country
+left join e3 on
+	e3.country = a.country
+left join l1 on
+	l1.country = a.country
+left join l2 on
+	l2.country = a.country
+left join median_age as m on
+	m.abbreviation = c.abbreviation
+left join r1 on
+	r1.country = a.country
+left join r2 on
+	r2.country = a.country
+left join r3 on
+	r3.country = a.country
+left join r4 on
+	r4.country = a.country
+left join r5 on
+	r5.country = a.country
+left join r6 on
+	r6.country = a.country
+left join r7 on
+	r7.country = a.country
+left join r8 on
+	r8.country = a.country
+left join w1 on
+	w1.`date` = a.`date`
+	and w1.city = c.capital
+left join w2 on
+	w2.`date` = a.`date`
+	and w2.city = c.capital
+left join w3 on
+	w3.`date` = a.`date`
+	and w3.city = c.capital
+order by
+	a.country;
