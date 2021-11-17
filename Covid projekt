@@ -1,5 +1,4 @@
-create or replace
-view world_temperature as
+create table world_temperature as
 select
 	`time`,
 	`date`,
@@ -8,8 +7,7 @@ select
 from
 	weather;
 
-create or replace
-view world_gust as
+create table world_gust as
 select
 	`time`,
 	`date`,
@@ -18,8 +16,7 @@ select
 from
 	weather;
 
-create or replace
-view world_rain as
+create table world_rain as
 select
 	`time`,
 	`date`,
@@ -68,7 +65,8 @@ select
 	'rome')),
 	'warszawa',
 	'warsaw') as capital,
-	population_density
+	population_density,
+	population
 from
 	countries),
 #upravena tabulka economies tak, aby generovala nejnovejsi data, kdyz data k roku 2020 nejsou
@@ -268,7 +266,8 @@ select
 	w1.dry_hours,
 	w2.gust,
 	w3.avg_day_temp,
-	#casove promenne	case
+	#casove promenne	
+	case
 		when weekday(a.`date`) in (0, 1, 2, 3, 4) then 0
 		else 1
 	end as `workday/weekday`,
